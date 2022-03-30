@@ -1,0 +1,45 @@
+name: BINARY_VERSION
+
+on:
+  create:
+     tags:
+       - '*'
+  workflow_dispatch:  
+  
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+    
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+
+      - name: Make build file ubuntu-latest
+        env:
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        run: |
+          raw=$(git branch -r --contains ${{ github.ref }})
+          branch=${raw/origin\/}
+          go env -w GOPRIVATE=github.com/LambdaTest
+          git config --global url."https://$ACCESS_TOKEN:x-oauth-basic@github.com/LambdaTest".insteadOf "https://github.com/LambdaTest"
+          echo $ACCESS_TOKEN
+          echo $GITHUB_TOKEN
+          env GOOS=darwin go build -ldflags="-s -w -X 'main.BINARY_VERSION=${GITHUB_REF##*/}'" -o binary-build/main .
+
+      - uses: jakejarvis/s3-sync-action@master
+        with:
+          args: --follow-symlinks --delete
+        env:
+          AWS_S3_BUCKET: mobile-automation-testing
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-1 # optional: defaults to us-east-1
+          SOURCE_DIR: 'binary-build'      # optional: defaults to entire repository
+          DEST_DIR: 'ControlFloor/ios_remote_provider/stage/${{ github.sha }}'

@@ -17,7 +17,16 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var BINARY_VERSION string
+
 func main() {
+
+	v_exists := os.Args[1] == "-v"
+	if v_exists && len(os.Args) == 2 {
+		fmt.Printf("BINARY_VERSION : %s ", BINARY_VERSION)
+		return
+	}
+
 	uclop := uc.NewUclop()
 	commonOpts := uc.OPTS{
 		uc.OPT("-debug", "Use debug log level", uc.FLAG),
